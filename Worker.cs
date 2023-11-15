@@ -55,12 +55,14 @@ namespace docker_hosts_writer
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            _dockerClient = GetClient();
-
             try
             {
                 _logger.LogInformation("Starting docker-hosts-writer service");
-                _dockerClient = GetClient();
+
+                if (_dockerClient == null)
+                {
+                    _dockerClient = await GetClient(stoppingToken);
+                }
 
                 // Monitor events
                 var containerEventsParameters = new ContainerEventsParameters
@@ -123,21 +125,16 @@ namespace docker_hosts_writer
                     stoppingToken
                 );
             }
-            catch (TimeoutException)
+            catch (IOException)
             {
-                _logger.LogInformation($"Oops! Somenthing went wrong. Likely the Docker engine not running at [{_dockerClient!.Configuration.EndpointBaseUri}]");
-                _logger.LogInformation($"You can try to change the endpoint path");
+                // Re-execute if docker disconnected
+                _dockerClient = await GetClient(stoppingToken);
+                await ExecuteAsync(stoppingToken);
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Exception is {ex.Message}");
-                _logger.LogError(ex.StackTrace);
-
-                if (ex.InnerException != null)
-                {
-                    _logger.LogError($"InnerException is {ex.InnerException.Message}");
-                    _logger.LogError(ex.InnerException.StackTrace);
-                }
+                _logger.LogError($"Exception is {ex}");
+                if (ex.InnerException != null) _logger.LogError($"InnerException is {ex} ");
             }
         }
 
@@ -239,10 +236,29 @@ namespace docker_hosts_writer
             }
         }
 
-        private DockerClient GetClient()
+        private async Task<DockerClient> GetClient(CancellationToken cancellationToken)
         {
+            // If cancelation requsted
+            cancellationToken.ThrowIfCancellationRequested();
+
+            // Trying connect to docker
             string endpoint = "npipe://./pipe/docker_engine";
-            return new DockerClientConfiguration(new Uri(endpoint)).CreateClient();
+            DockerClientConfiguration config = new DockerClientConfiguration(new Uri(endpoint));
+            DockerClient client = config.CreateClient();
+
+            try
+            {
+                VersionResponse response = await client.System.GetVersionAsync();
+                _logger.LogInformation($"Connected to Docker {response.Version} with API vesion {response.APIVersion} (Arch: {response.Arch})");
+                return client;
+            }
+            catch (Exception)
+            {
+                _logger.LogInformation($"Oops! Somenthing went wrong. Likely the Docker engine not running at [{client.Configuration.EndpointBaseUri}]");
+                _logger.LogInformation("Retrying in 5 seconds...");
+                await Task.Delay(5000, cancellationToken);
+                return await GetClient(cancellationToken);
+            }
         }
     }
 }
