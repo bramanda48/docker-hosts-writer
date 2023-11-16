@@ -1,7 +1,5 @@
 using Docker.DotNet;
 using Docker.DotNet.Models;
-using Microsoft.Extensions.Hosting.Systemd;
-using Microsoft.Extensions.Hosting.WindowsServices;
 using Newtonsoft.Json;
 
 namespace docker_hosts_writer
@@ -41,12 +39,6 @@ namespace docker_hosts_writer
 
         private DockerClient? _dockerClient;
         private Dictionary<string, List<DockerHosts>> _dockerHosts = new Dictionary<string, List<DockerHosts>>();
-
-        private enum ServiceHosting
-        {
-            WindowsService,
-            Systemd,
-        }
 
         public Worker(ILogger<Worker> logger)
         {
@@ -140,8 +132,7 @@ namespace docker_hosts_writer
 
         private void DoRewritingHostsFile()
         {
-            bool IsSystemd = IsRunningOn(ServiceHosting.Systemd);
-            string hostsPath = (IsSystemd) ? "/etc/hosts" : $"{Environment.GetEnvironmentVariable("windir")}\\system32\\drivers\\etc\\hosts";
+            string hostsPath = (OperatingSystem.IsWindows()) ? $"{Environment.GetEnvironmentVariable("windir")}\\system32\\drivers\\etc\\hosts" : "/etc/hosts";
 
             // Get old hosts data
             if (!File.Exists(hostsPath))
@@ -223,26 +214,13 @@ namespace docker_hosts_writer
             return newList;
         }
 
-        private bool IsRunningOn(ServiceHosting hosting)
-        {
-            switch (hosting)
-            {
-                case ServiceHosting.WindowsService:
-                    return WindowsServiceHelpers.IsWindowsService();
-                case ServiceHosting.Systemd:
-                    return SystemdHelpers.IsSystemdService();
-                default:
-                    return false;
-            }
-        }
-
         private async Task<DockerClient> GetClient(CancellationToken cancellationToken)
         {
             // If cancelation requsted
             cancellationToken.ThrowIfCancellationRequested();
 
             // Trying connect to docker
-            string endpoint = "npipe://./pipe/docker_engine";
+            string endpoint = (OperatingSystem.IsWindows()) ? "npipe://./pipe/docker_engine" : "unix:///var/run/docker.sock";
             DockerClientConfiguration config = new DockerClientConfiguration(new Uri(endpoint));
             DockerClient client = config.CreateClient();
 
