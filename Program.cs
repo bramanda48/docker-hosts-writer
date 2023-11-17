@@ -1,7 +1,6 @@
 using docker_hosts_writer;
 using System.Diagnostics;
 
-
 // Windows event log variable
 const string windowsEventSourceName = "Docker Hosts Writer (Worker)";
 const string windowsEventLogName = "Docker Hosts Writer";
@@ -34,6 +33,7 @@ IHost host = Host.CreateDefaultBuilder(args)
     })
     .ConfigureServices(services =>
     {
+        services.AddSingleton<Hosts>();
         services.AddHostedService<Worker>();
     })
     .Build();
