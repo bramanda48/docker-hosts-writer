@@ -13,6 +13,10 @@ if (isWindows)
         EventLog.CreateEventSource(new EventSourceCreationData(windowsEventSourceName, windowsEventLogName));
 }
 
+// Parsing arguments
+CommandLines commands = new CommandLines() { Args = args };
+CommandLines.Options options = commands.Parse();
+
 IHost host = Host.CreateDefaultBuilder(args)
     .UseWindowsService(options =>
     {
@@ -34,13 +38,17 @@ IHost host = Host.CreateDefaultBuilder(args)
                 options.LogName = windowsEventLogName;
             });
         }
+
+        // Verbose command only work without appsettings.json
+        // Log level in appsettings.json has higher priority
+        if (options.Verbose)
+            log.SetMinimumLevel(LogLevel.Debug);
+        else
+            log.SetMinimumLevel(LogLevel.Information);
     })
     .ConfigureServices(services =>
     {
-        services.AddSingleton(new CommandLines()
-        {
-            Args = args
-        });
+        services.AddSingleton(commands);
         services.AddSingleton<Hosts>();
         services.AddHostedService<Worker>();
     })
