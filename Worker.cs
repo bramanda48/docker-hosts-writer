@@ -1,7 +1,6 @@
 using Docker.DotNet;
 using Docker.DotNet.Models;
 using Newtonsoft.Json;
-using System.Threading;
 
 namespace docker_hosts_writer
 {

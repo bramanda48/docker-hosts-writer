@@ -1,5 +1,4 @@
 ﻿using Docker.DotNet;
-using Docker.DotNet.Models;
 
 namespace docker_hosts_writer
 {
