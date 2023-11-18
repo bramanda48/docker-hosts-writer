@@ -1,6 +1,7 @@
 using Docker.DotNet;
 using Docker.DotNet.Models;
 using Newtonsoft.Json;
+using System.Threading;
 
 namespace docker_hosts_writer
 {
@@ -85,31 +86,34 @@ namespace docker_hosts_writer
                         {
                             "event", new Dictionary<string, bool>()
                             {
-                                {"start", true},
-                                {"die", true}
+                                {"connect", true},
+                                {"disconnect", true}
                             }
                         },
                         {
                             "type", new Dictionary<string, bool>()
                             {
-                                {"container", true},
+                                {"network", true},
                             }
                         },
                     },
                 };
 
                 _logger.LogInformation(1000, "Monitoring docker events");
-                DockerMonitor<JSONMessage> monitor = new DockerMonitor<JSONMessage>(async value =>
+                DockerMonitor<Message> monitor = new DockerMonitor<Message>(async value =>
                 {
                     try
                     {
-                        _logger.LogInformation(1000, $"New ${value.Status} events from container {value.ID.Substring(0, 12)}");
+                        string containerId = value.Actor.Attributes["container"];
+                        string networkName = value.Actor.Attributes["name"];
+
+                        _logger.LogInformation(1000, $"New ${value.Action} events from container {containerId.Substring(0, 12)} to network {networkName}");
                         _logger.LogDebug(JsonConvert.SerializeObject(value));
 
-                        if (value.Status == "start")
-                            await _hosts.AddHost(value.ID, cancellationToken);
-                        else if (value.Status == "die")
-                            _hosts.RemoveHost(value.ID);
+                        if (value.Action == "connect")
+                            await _hosts.AddHost(containerId, networkName, cancellationToken);
+                        else if (value.Action == "disconnect")
+                            _hosts.RemoveHost(containerId, networkName);
 
                         // Rewriting hosts file
                         DoRewritingHostsFile();
@@ -163,7 +167,12 @@ namespace docker_hosts_writer
 
             var containers = await _dockerClient!.Containers.ListContainersAsync(containerParams);
             foreach (var value in containers)
-                await _hosts.AddHost(value.ID, cancellationToken);
+            {
+                foreach (KeyValuePair<string, EndpointSettings> network in value.NetworkSettings.Networks)
+                {
+                    await _hosts.AddHost(value.ID, network.Key, cancellationToken);
+                }
+            }
 
             // Rewriting hosts file
             DoRewritingHostsFile();
@@ -188,11 +197,11 @@ namespace docker_hosts_writer
             List<string> newHostLogs = new List<string>() { "Adding hosts:" };
 
             newHostLine.Add(_beginBlock);
-            foreach (KeyValuePair<string, List<DockerHosts>> hosts in dockerHosts)
+            foreach (var container in dockerHosts)
             {
-                foreach (DockerHosts host in hosts.Value)
+                foreach (var network in container.Value)
                 {
-                    var entry = $"{host.IPAddress}\t{String.Join(" ", host.Domain)}";
+                    var entry = $"{network.Value.IPAddress}\t{String.Join(" ", network.Value.Domain)}";
                     newHostLine.Add(entry);
                     newHostLogs.Add("\t" + entry);
                 }
@@ -202,8 +211,26 @@ namespace docker_hosts_writer
             if (dockerHosts.Count > 0)
                 _logger.LogInformation(3000, String.Join("\n", newHostLogs));
 
-            // Writing to file
-            File.WriteAllLines(hostsFile, newHostLine);
+            WriteAllLines(hostsFile, newHostLine);
+        }
+
+        private void WriteAllLines(string path, List<string> contents, int retry = 0)
+        {
+            try
+            {
+                File.WriteAllLines(path, contents);
+            }
+            catch (IOException)
+            {
+                if (retry <= 2)
+                {
+                    //Recall with delay
+                    retry++;
+                    Thread.Sleep(2000);
+                    WriteAllLines(path, contents, retry);
+                }
+                else throw;
+            }
         }
 
         private List<string> FilterListNotBetweenBlock(List<string> list, string begin, string end)

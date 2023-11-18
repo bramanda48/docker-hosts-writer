@@ -14,7 +14,7 @@ namespace docker_hosts_writer
         private readonly ILogger<Hosts> _logger;
 
         private DockerClient? _dockerClient;
-        private Dictionary<string, List<DockerHosts>> _dockerHosts;
+        private Dictionary<string, Dictionary<string, DockerHosts>> _dockerHosts;
 
         private string _domainPrefix = String.Empty;
         private string _domainSuffix = String.Empty;
@@ -22,7 +22,7 @@ namespace docker_hosts_writer
         public Hosts(ILogger<Hosts> logger)
         {
             _logger = logger;
-            _dockerHosts = new Dictionary<string, List<DockerHosts>>();
+            _dockerHosts = new Dictionary<string, Dictionary<string, DockerHosts>>();
         }
 
         public void SetDockerClient(DockerClient dockerClient)
@@ -39,9 +39,9 @@ namespace docker_hosts_writer
             _domainSuffix = defaultSuffix;
         }
 
-        public Dictionary<string, List<DockerHosts>> GetHost() => _dockerHosts;
+        public Dictionary<string, Dictionary<string, DockerHosts>> GetHost() => _dockerHosts;
 
-        public async Task AddHost(string containerId, CancellationToken cancellationToken)
+        public async Task AddHost(string containerId, string networkName, CancellationToken cancellationToken)
         {
             var domains = new List<string>();
             var containerDetails = await _dockerClient!.Containers.InspectContainerAsync(containerId, cancellationToken);
@@ -54,40 +54,14 @@ namespace docker_hosts_writer
             if (containerDetails.Config.Labels.ContainsKey("com.docker.compose.service"))
                 domains.Add(containerDetails.Config.Labels["com.docker.compose.service"]);
 
-            foreach (KeyValuePair<string, EndpointSettings> network in containerDetails.NetworkSettings.Networks)
-                AddHost(containerId, network.Value.IPAddress, domains);
+            var network = containerDetails.NetworkSettings.Networks[networkName];
+            if (network != null)
+                AddHost(containerId, networkName, network.IPAddress, domains);
         }
 
-        public void AddHost(string containerId, string ip, string domain)
+        private void AddHost(string containerId, string networkName, string ip, List<string> domains)
         {
-            domain = !String.IsNullOrEmpty(_domainPrefix) && !domain.StartsWith(_domainSuffix) ? $"{_domainPrefix}{domain}" : domain;
-            domain = !String.IsNullOrEmpty(_domainSuffix) && !domain.EndsWith(_domainSuffix) ? $"{domain}{_domainSuffix}" : domain;
 
-            if (_dockerHosts.ContainsKey(containerId))
-            {
-                int index = _dockerHosts[containerId].FindIndex(x => x.IPAddress == ip);
-                if (index > -1)
-                {
-                    bool isExists = _dockerHosts[containerId][index].Domain.Contains(domain);
-                    if (!isExists)
-                    {
-                        _dockerHosts[containerId][index].Domain.Add(domain);
-                    }
-                    return;
-                }
-            }
-            _dockerHosts.Add(containerId, new List<DockerHosts>
-            {
-                new DockerHosts()
-                {
-                    IPAddress = ip,
-                    Domain = [domain]
-                }
-            });
-        }
-
-        public void AddHost(string containerId, string ip, List<string> domains)
-        {
             domains = domains.Distinct().Select(domain =>
             {
                 domain = !String.IsNullOrEmpty(_domainPrefix) && !domain.StartsWith(_domainSuffix) ? $"{_domainPrefix}{domain}" : domain;
@@ -95,29 +69,33 @@ namespace docker_hosts_writer
                 return domain;
             }).ToList();
 
-            if (_dockerHosts.ContainsKey(containerId))
+            if (!_dockerHosts.ContainsKey(containerId))
             {
-                _dockerHosts[containerId].Add(new DockerHosts()
+                _dockerHosts.Add(containerId, new Dictionary<string, DockerHosts>{{
+                        networkName, new DockerHosts() {
+                            IPAddress = ip,
+                            Domain = domains
+                        }}});
+            }
+            else
+            {
+                if (_dockerHosts[containerId].ContainsKey(networkName))
+                    _dockerHosts[containerId].Remove(networkName);
+
+                _dockerHosts[containerId].Add(networkName, new DockerHosts()
                 {
                     IPAddress = ip,
                     Domain = domains
                 });
-                return;
             }
-            _dockerHosts.Add(containerId, new List<DockerHosts>
-            {
-                new DockerHosts()
-                {
-                    IPAddress = ip,
-                    Domain = domains
-                }
-            });
         }
 
-        public void RemoveHost(string containerId)
+        public void RemoveHost(string containerId, string networkName)
         {
-            _logger.LogInformation(3001, $"Removing hosts (containerID={containerId.Substring(0, 12)})");
-            _dockerHosts.Remove(containerId);
+            _logger.LogInformation(3001, $"Removing hosts (containerID={containerId.Substring(0, 12)}, networkName={networkName})");
+
+            if (_dockerHosts.ContainsKey(containerId))
+                _dockerHosts[containerId].Remove(networkName);
         }
     }
 }
