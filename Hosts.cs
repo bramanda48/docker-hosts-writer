@@ -25,12 +25,16 @@ namespace docker_hosts_writer
             _dockerHosts = new Dictionary<string, List<DockerHosts>>();
         }
 
-        public void SetConfig(
-            DockerClient dockerClient,
+        public void SetDockerClient(DockerClient dockerClient)
+        {
+            _dockerClient = dockerClient;
+
+        }
+
+        public void SetPrefixSuffix(
             string defaultPrefix,
             string defaultSuffix)
         {
-            _dockerClient = dockerClient;
             _domainPrefix = defaultPrefix;
             _domainSuffix = defaultSuffix;
         }

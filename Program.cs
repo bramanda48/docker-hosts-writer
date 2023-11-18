@@ -5,7 +5,8 @@ using System.Diagnostics;
 const string windowsEventSourceName = "Docker Hosts Writer (Worker)";
 const string windowsEventLogName = "Docker Hosts Writer";
 
-if (OperatingSystem.IsWindows())
+var isWindows = OperatingSystem.IsWindows();
+if (isWindows)
 {
     // Create event log
     if (!EventLog.SourceExists(windowsEventSourceName))
@@ -25,14 +26,21 @@ IHost host = Host.CreateDefaultBuilder(args)
             options.SingleLine = true;
             options.TimestampFormat = "yyyy-MM-dd HH:mm:ss ";
         });
-        log.AddEventLog(options =>
+        if (isWindows)
         {
-            options.SourceName = windowsEventSourceName;
-            options.LogName = windowsEventLogName;
-        });
+            log.AddEventLog(options =>
+            {
+                options.SourceName = windowsEventSourceName;
+                options.LogName = windowsEventLogName;
+            });
+        }
     })
     .ConfigureServices(services =>
     {
+        services.AddSingleton(new CommandLines()
+        {
+            Args = args
+        });
         services.AddSingleton<Hosts>();
         services.AddHostedService<Worker>();
     })
