@@ -263,7 +263,7 @@ namespace docker_hosts_writer
             try
             {
                 VersionResponse response = await client.System.GetVersionAsync();
-                _logger.LogInformation(1000, $"Connected to Docker {response.Version} with API vesion {response.APIVersion} (Arch: {response.Arch})\n");
+                _logger.LogInformation(1000, $"Connected to Docker {response.Version} with API vesion {response.APIVersion} (Arch: {response.Arch})");
                 return client;
             }
             catch (Exception)
