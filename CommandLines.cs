@@ -30,7 +30,7 @@ namespace docker_hosts_writer
             {
                 Endpoints = (OperatingSystem.IsWindows()) ? "npipe://./pipe/docker_engine" : "unix:///var/run/docker.sock";
                 HostsFile = (OperatingSystem.IsWindows()) ? $"{Environment.GetEnvironmentVariable("windir")}\\system32\\drivers\\etc\\hosts" : "/etc/hosts";
-                Suffix = ".docker";
+                Suffix = String.Empty;
                 Prefix = String.Empty;
             }
         }
