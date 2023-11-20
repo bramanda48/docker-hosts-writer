@@ -9,7 +9,7 @@ on:
       - "master"
 
 jobs:
-  windows:
+  build:
     environment: "production"
     runs-on: windows-2022
     steps:
@@ -18,13 +18,21 @@ jobs:
         uses: actions/setup-dotnet@v3
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-      - name: Build application (Windows)
-        run: |
-          dotnet build --configuration Release
-          dotnet publish -c Release -r win-x64 -p:PublishReadyToRun=true -p:PublishSingleFile=true --self-contained true
-      - name: Archive exe
-        uses: actions/upload-artifact@v2
+      - name: Build release
+        run: dotnet build --configuration Release
+      - name: Publish application (Windows)
+        run: dotnet publish -c Release -r win-x64 -p:PublishReadyToRun=true -p:PublishSingleFile=true --self-contained true
+      - name: Publish application (Linux)
+        run: dotnet publish -c Release -r linux-x64 -p:PublishReadyToRun=true -p:PublishSingleFile=true --self-contained true
+      - name: Archive windows
+        uses: actions/upload-artifact@v3
         with:
             name: docker-host-writer-windows-${{ github.sha }}-unsigned
+            path: bin/Release/net6.0/win-x64/publish/
+            if-no-files-found: error
+      - name: Archive linux
+        uses: actions/upload-artifact@v3
+        with:
+            name: docker-host-writer-linux-${{ github.sha }}
             path: bin/Release/net6.0/win-x64/publish/
             if-no-files-found: error
