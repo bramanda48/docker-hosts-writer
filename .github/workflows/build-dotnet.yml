@@ -1,0 +1,30 @@
+name: Build .NET 6
+
+env:
+  DOTNET_VERSION: "6.0.24"
+
+on: 
+  push:
+    branches:
+      - "master"
+
+jobs:
+  windows:
+    environment: "production"
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+      - name: Build application (Windows)
+        run: |
+          dotnet build --configuration Release --no-restore
+          dotnet publish -c Release -r win-x64 -p:PublishReadyToRun=true -p:PublishSingleFile=true --self-contained true
+      - name: Archive exe
+        uses: actions/upload-artifact@v2
+        with:
+            name: docker-host-writer-windows-${{ github.sha }}-unsigned
+            path: bin/Release/net6.0/win-x64/publish/
+            if-no-files-found: error
