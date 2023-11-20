@@ -20,7 +20,7 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
       - name: Build application (Windows)
         run: |
-          dotnet build --configuration Release --no-restore
+          dotnet build --configuration Release
           dotnet publish -c Release -r win-x64 -p:PublishReadyToRun=true -p:PublishSingleFile=true --self-contained true
       - name: Archive exe
         uses: actions/upload-artifact@v2
