@@ -34,5 +34,5 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
             name: docker-host-writer-linux-${{ github.sha }}
-            path: bin/Release/net6.0/win-x64/publish/
+            path: bin/Release/net6.0/linux-x64/publish/
             if-no-files-found: error
