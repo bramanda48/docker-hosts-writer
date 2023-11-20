@@ -1,7 +1,7 @@
 name: Build .NET 6
 
 env:
-  DOTNET_VERSION: "6.0.24"
+  DOTNET_VERSION: "6.0.x"
 
 on: 
   push:
