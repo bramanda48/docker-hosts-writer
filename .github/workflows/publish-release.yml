@@ -14,7 +14,6 @@ on:
 
 permissions:
   contents: write
-  pull-requests: write
 
 jobs:
   create_release_tag:
@@ -27,17 +26,19 @@ jobs:
       release_id: ${{ steps.create_release.outputs.id }}
     steps:
       - uses: actions/checkout@v3
-      - uses: softprops/action-gh-release@v1
-        id: create_release
-        name: Create release and tags
+      - uses: codfish/semantic-release-action@v3
+        id: semantic
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-            tag_name: "v${{ env.PL_VENDOR_VERSION }}"
-            name: "v${{ env.PL_VENDOR_VERSION }}"
-            body: "v${{ env.PL_VENDOR_VERSION }}"
-            prerelease: true
-            draft: false
-            files: appsettings.json
-            fail_on_unmatched_files: true
+          branches: |
+            [
+              {
+                name: "master",
+                prerelease: true
+              }
+            ]
+          tag-format: "v${{ env.PL_VENDOR_VERSION }}"
 
   release:
     name: "Release apps"
@@ -60,25 +61,25 @@ jobs:
         run: dotnet build --configuration Release
       - name: Publish application
         if: matrix.platform == 'windows-2022'
-        run: >
-          dotnet publish 
-            -c Release 
-            -r win-x64 
-            -p:PublishReadyToRun=true 
-            -p:PublishSingleFile=true 
-            -p:Version=${{ env.PL_VENDOR_VERSION }} 
-            -p:AssemblyVersion=${{ env.PL_VENDOR_VERSION }}.${{ github.run_id }} 
+        run: |
+          dotnet publish \
+            -c Release \
+            -r win-x64 \
+            -p:PublishReadyToRun=true \
+            -p:PublishSingleFile=true \
+            -p:Version=${{ env.PL_VENDOR_VERSION }} \
+            -p:AssemblyVersion=${{ env.PL_VENDOR_VERSION }}.${{ github.run_id }} \
             --self-contained true
       - name: Publish application
         if: matrix.platform == 'ubuntu-latest'
-        run: >
-          dotnet publish
-            -c Release 
-            -r linux-x64 
-            -p:PublishReadyToRun=true 
-            -p:PublishSingleFile=true 
-            -p:Version=${{ env.PL_VENDOR_VERSION }} 
-            -p:AssemblyVersion=${{ env.PL_VENDOR_VERSION }}.${{ github.run_id }} 
+        run: |
+          dotnet publish \
+            -c Release \
+            -r linux-x64 \
+            -p:PublishReadyToRun=true \
+            -p:PublishSingleFile=true \
+            -p:Version=${{ env.PL_VENDOR_VERSION }} \
+            -p:AssemblyVersion=${{ env.PL_VENDOR_VERSION }}.${{ github.run_id }} \
             --self-contained true
       - name: Upload windows executable
         if: matrix.platform == 'windows-2022'
