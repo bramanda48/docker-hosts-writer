@@ -76,13 +76,13 @@ jobs:
       - name: Publish application
         if: matrix.platform == 'windows-2022'
         run: |
-          dotnet publish --self-contained true \
-            -c Release \
-            -r win-x64 \
-            -p:PublishReadyToRun=true \
-            -p:PublishSingleFile=true \
-            -p:Version=${{ env.PL_VENDOR_VERSION }} \
-            -p:AssemblyVersion=${{ env.PL_VENDOR_VERSION }}.${{ github.run_id }} 
+          dotnet publish --self-contained true `
+            -c Release `
+            -r win-x64 `
+            -p:PublishReadyToRun=true `
+            -p:PublishSingleFile=true `
+            -p:Version=${{ env.PL_VENDOR_VERSION }} `
+            -p:AssemblyVersion=${{ env.PL_VENDOR_VERSION }}.${{ github.run_number }} 
       - name: Publish application
         if: matrix.platform == 'ubuntu-latest'
         run: |
