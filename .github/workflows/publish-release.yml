@@ -23,7 +23,7 @@ jobs:
     env:
         PL_VENDOR_VERSION: ${{ github.event.inputs.vendor_version || '1.0.0' }}
     outputs:
-      release_id: ${{ steps.create_release.outputs.id }}
+      semantic: ${{ steps.semantic.outputs }}
     steps:
       - uses: actions/checkout@v3
       - uses: codfish/semantic-release-action@v3
