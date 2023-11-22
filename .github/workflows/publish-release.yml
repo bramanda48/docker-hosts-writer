@@ -38,7 +38,6 @@ jobs:
                 prerelease: true
               }
             ]
-          tag-format: "v${{ env.PL_VENDOR_VERSION }}"
 
   release:
     name: "Release apps"
