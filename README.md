@@ -1,7 +1,7 @@
 <a name="readme-top"></a>
 
 <div align="center">
-  <a href="https://github.com/github_username/repo_name">
+  <a href="https://github.com/bramanda48/docker-hosts-writer">
     <img src="./screenshoot/image-1.png" alt="Screenshoot" width="500px">
   </a>
   <h2 align="center">Docker Hosts Writer</h2>
@@ -53,4 +53,4 @@ This project is licensed under the MIT License - see the [LICENSE.md](https://gi
 ## Acknowledgments
 
 Inspiration, code snippets, icon, etc.
-* [Logo or Application Icon](https://github.com/matiassingers/awesome-readme) by Fathema Khanom in [Flaticon](https://www.flaticon.com/)
+* [Logo or Application Icon](https://www.flaticon.com/free-icon/web_7362015) by Fathema Khanom in [Flaticon](https://www.flaticon.com/)

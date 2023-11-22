@@ -10,7 +10,8 @@ on:
 
 jobs:
   build:
-    environment: "production"
+    name: "Build apps"
+    environment: "Production"
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@v3
