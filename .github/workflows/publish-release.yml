@@ -31,7 +31,7 @@ jobs:
         uses: Fresa/trunk-based-release-versioning@v0
       - name: Convert commit logs to JSON
         id: convert-commit-logs
-        uses: mikefarah/yq@v4.25.2
+        uses: mikefarah/yq@master
         with:
           cmd: yq ea -o=json 'select(. != null) | [.]' "$(echo "${{ steps.versioning.outputs.commit-logs-path }}" | sed "s|^${{ github.workspace }}/||")" | tee commit_logs.json
       - name: Generate release notes
@@ -76,25 +76,23 @@ jobs:
       - name: Publish application
         if: matrix.platform == 'windows-2022'
         run: |
-          dotnet publish \
+          dotnet publish --self-contained true \
             -c Release \
             -r win-x64 \
             -p:PublishReadyToRun=true \
             -p:PublishSingleFile=true \
             -p:Version=${{ env.PL_VENDOR_VERSION }} \
-            -p:AssemblyVersion=${{ env.PL_VENDOR_VERSION }}.${{ github.run_id }} \
-            --self-contained true
+            -p:AssemblyVersion=${{ env.PL_VENDOR_VERSION }}.${{ github.run_id }} 
       - name: Publish application
         if: matrix.platform == 'ubuntu-latest'
         run: |
-          dotnet publish \
+          dotnet publish --self-contained true \
             -c Release \
             -r linux-x64 \
             -p:PublishReadyToRun=true \
             -p:PublishSingleFile=true \
             -p:Version=${{ env.PL_VENDOR_VERSION }} \
-            -p:AssemblyVersion=${{ env.PL_VENDOR_VERSION }}.${{ github.run_id }} \
-            --self-contained true
+            -p:AssemblyVersion=${{ env.PL_VENDOR_VERSION }}.${{github.run_number}}
       - name: Upload windows executable
         if: matrix.platform == 'windows-2022'
         uses: svenstaro/upload-release-action@2.2.1
