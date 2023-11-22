@@ -23,13 +23,36 @@ jobs:
     env:
         PL_VENDOR_VERSION: ${{ github.event.inputs.vendor_version || '1.0.0' }}
     outputs:
-      semantic: ${{ steps.semantic.outputs }}
+      is_prerelase: ${{ steps.versioning.outputs.is-prerelease }}
     steps:
       - uses: actions/checkout@v3
-      - uses: codfish/semantic-release-action@v3
-        id: semantic
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Determine release version
+        id: versioning
+        uses: Fresa/trunk-based-release-versioning@v0
+      - name: Convert commit logs to JSON
+        id: convert-commit-logs
+        uses: mikefarah/yq@v4.25.2
+        with:
+          cmd: yq ea -o=json 'select(. != null) | [.]' "$(echo "${{ steps.versioning.outputs.commit-logs-path }}" | sed "s|^${{ github.workspace }}/||")" | tee commit_logs.json
+      - name: Generate release notes
+        id: release_notes
+        uses: ./
+        with:
+          version: ${{ env.PL_VENDOR_VERSION }}
+          last_release_ref: ${{ steps.versioning.outputs.last-release-ref }}
+          release_ref: ${{ steps.versioning.outputs.release-ref }}
+          path_to_commits: ./commit_logs.json
+      - name: Create release and tags
+        id: create_release
+        uses: softprops/action-gh-release@v1        
+        with:
+            tag_name: "v${{ env.PL_VENDOR_VERSION }}"
+            name: "v${{ env.PL_VENDOR_VERSION }}"
+            body: ${{ steps.release_notes.outputs.release_notes }}
+            prerelease: ${{ steps.versioning.outputs.is-prerelease }}
+            draft: false
+            files: appsettings.json
+            fail_on_unmatched_files: true
 
   release:
     name: "Release apps"
@@ -72,14 +95,6 @@ jobs:
             -p:Version=${{ env.PL_VENDOR_VERSION }} \
             -p:AssemblyVersion=${{ env.PL_VENDOR_VERSION }}.${{ github.run_id }} \
             --self-contained true
-      - name: Upload appsettings.json
-        if: matrix.platform == 'windows-2022'
-        uses: svenstaro/upload-release-action@2.2.1
-        with:
-            repo_token: ${{ secrets.GITHUB_TOKEN }}
-            tag: "v${{ env.PL_VENDOR_VERSION }}"
-            file: bin/Release/net6.0/win-x64/publish/appsettings.json
-            asset_name: appsettings.json
       - name: Upload windows executable
         if: matrix.platform == 'windows-2022'
         uses: svenstaro/upload-release-action@2.2.1
@@ -88,6 +103,7 @@ jobs:
             tag: "v${{ env.PL_VENDOR_VERSION }}"
             file: bin/Release/net6.0/win-x64/publish/docker-hosts-writer.exe
             asset_name: docker-host-writer-${{ env.PL_VENDOR_VERSION }}-windows.exe
+            prerelease: ${{ needs.create_release_tag.outputs.is_prerelase }}
       - name: Upload linux executable
         if: matrix.platform == 'ubuntu-latest'
         uses: svenstaro/upload-release-action@2.2.1
@@ -96,3 +112,4 @@ jobs:
             tag: "v${{ env.PL_VENDOR_VERSION }}"
             file: bin/Release/net6.0/linux-x64/publish/docker-hosts-writer
             asset_name: docker-host-writer-${{ env.PL_VENDOR_VERSION }}-linux
+            prerelease: ${{ needs.create_release_tag.outputs.is_prerelase }}
