@@ -30,14 +30,6 @@ jobs:
         id: semantic
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          branches: |
-            [
-              {
-                name: "master",
-                prerelease: true
-              }
-            ]
 
   release:
     name: "Release apps"
@@ -80,6 +72,14 @@ jobs:
             -p:Version=${{ env.PL_VENDOR_VERSION }} \
             -p:AssemblyVersion=${{ env.PL_VENDOR_VERSION }}.${{ github.run_id }} \
             --self-contained true
+      - name: Upload appsettings.json
+        if: matrix.platform == 'windows-2022'
+        uses: svenstaro/upload-release-action@2.2.1
+        with:
+            repo_token: ${{ secrets.GITHUB_TOKEN }}
+            tag: "v${{ env.PL_VENDOR_VERSION }}"
+            file: bin/Release/net6.0/win-x64/publish/appsettings.json
+            asset_name: appsettings.json
       - name: Upload windows executable
         if: matrix.platform == 'windows-2022'
         uses: svenstaro/upload-release-action@2.2.1
@@ -88,7 +88,6 @@ jobs:
             tag: "v${{ env.PL_VENDOR_VERSION }}"
             file: bin/Release/net6.0/win-x64/publish/docker-hosts-writer.exe
             asset_name: docker-host-writer-${{ env.PL_VENDOR_VERSION }}-windows.exe
-            prerelease: true
       - name: Upload linux executable
         if: matrix.platform == 'ubuntu-latest'
         uses: svenstaro/upload-release-action@2.2.1
@@ -97,4 +96,3 @@ jobs:
             tag: "v${{ env.PL_VENDOR_VERSION }}"
             file: bin/Release/net6.0/linux-x64/publish/docker-hosts-writer
             asset_name: docker-host-writer-${{ env.PL_VENDOR_VERSION }}-linux
-            prerelease: true
