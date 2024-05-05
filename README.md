@@ -6,7 +6,7 @@
   </a>
   <h2 align="center">Docker Hosts Writer</h2>
   <div align="center">
-    <h4 align="center">Small tool to add container address into hosts file on Windows and Linux</h4>
+    <p align="center">Small tool to add container address into hosts file on Windows and Linux</p>
     <div>
         <a href="https://github.com/bramanda48/docker-hosts-writer/actions?query=workflow:%22Build+.NET+6%22"><img src="https://github.com/bramanda48/docker-hosts-writer/workflows/Build%20.NET%206/badge.svg" alt="Build .NET 6"></a>
         <a href="https://github.com/bramanda48/docker-hosts-writer/releases/"><img src="https://img.shields.io/github/release/bramanda48/docker-hosts-writer?include_prereleases=&sort=semver&color=blue" alt="GitHub release"></a>
